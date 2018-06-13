@@ -1,0 +1,11 @@
+{
+  "name": "easy-alexa",
+  "set": "master",
+  "source": "https://github.com/twitchard/package-sets.git",
+  "depends": [
+    "alexa",
+    "generics-rep",
+    "prelude",
+    "simple-json"
+  ]
+}

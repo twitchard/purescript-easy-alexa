@@ -1,0 +1,28 @@
+{
+  "name": "purescript-easy-alexa",
+  "authors": [
+    "richard.marmorstein@gmail.com"
+  ],
+  "description": "Build an Alexa Skill based off a simple data type",
+  "main": "",
+  "keywords": [
+    "alexa",
+    "purescript",
+    "voice"
+  ],
+  "license": "MIT",
+  "homepage": "",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "purescript-alexa": "^0.4.0",
+    "purescript-generics-rep": "^6.0.0",
+    "purescript-prelude": "^4.0.1",
+    "purescript-simple-json": "^4.0.0"
+  }
+}
