@@ -10,6 +10,7 @@ import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty (filter) as NE
 import Data.Either (Either(..), note)
 import Data.Generic.Rep (class Generic, Argument(..), Constructor(..), NoArguments(..), Sum(..), to)
+import Data.Int (fromString) as Int
 import Data.List (List(..), reverse, (:))
 import Data.List (fromFoldable) as List
 import Data.Map (Map)
@@ -319,3 +320,31 @@ standardBuiltins =
   , "Stop"
   , "Yes"
   ]
+
+data Builtin (sym :: Symbol) a
+  = Builtin a
+  | Unknown String
+  | Missing
+
+exactly :: ∀ sym a. Builtin sym a → Maybe a
+exactly (Builtin a) = Just a
+exactly (Unknown s) = Nothing
+exactly Missing     = Nothing
+
+class BuiltinSlot (sym :: Symbol) a where
+  parseBuiltin :: (SProxy sym) → String → Maybe a
+
+instance slotBuiltinSlot :: 
+  ( BuiltinSlot sym a
+  , IsSymbol sym
+  ) => EmptyableSlot (Builtin sym a) where
+  parseSlot' s =
+    case (parseBuiltin (SProxy :: SProxy sym) s) of
+      Nothing → (Unknown s)
+      Just b → (Builtin b)
+  name' _ = reflectSymbol (SProxy :: SProxy sym)
+  slotValues' = mempty
+  empty = Missing
+
+instance builtinSlotAmazonNumber :: BuiltinSlot "AMAZON.NUMBER" Int where
+  parseBuiltin _ = Int.fromString
