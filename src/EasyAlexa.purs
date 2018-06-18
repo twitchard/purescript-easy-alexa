@@ -5,7 +5,7 @@ import Prelude
 import Amazon.Alexa.LanguageModel (LanguageModel)
 import Amazon.Alexa.Types (AlexaRequest(..))
 import Control.Monad.Error.Class (throwError)
-import Data.Array (elem, filter, find, fromFoldable, nub, null, partition)
+import Data.Array (elem, filter, find, fromFoldable, length, nub, null, partition)
 import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty (filter) as NE
 import Data.Either (Either(..), note)
@@ -192,7 +192,7 @@ languageModel _ invocationName samples = do
          }
   where
     intents = renderIntent <$> allIntentRecs # fromFoldable
-    types = renderSlotType <$> allSlotRecs
+    types = renderSlotType <$> allSlotRecs # (filter \{values} → length values > 0)
 
     mustHandleSessionEnded =
       intentList'
