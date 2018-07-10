@@ -10,6 +10,7 @@ import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty (filter) as NE
 import Data.Either (Either(..), note)
 import Data.Generic.Rep (class Generic, Argument(..), Constructor(..), NoArguments(..), Sum(..), to)
+import Data.Generic.Rep.Show (genericShow)
 import Data.Int (fromString) as Int
 import Data.List (List(..), reverse, (:))
 import Data.List (fromFoldable) as List
@@ -25,7 +26,6 @@ import Prim.RowList (class RowToList, Cons, Nil, kind RowList)
 import Record (insert)
 import Simple.JSON (read)
 import Type.Prelude (class IsSymbol, Proxy(..), RLProxy(..), SProxy(..), reflectSymbol)
-
 
 class EmptyableSlot a where
   parseSlot' :: String → a
@@ -325,6 +325,12 @@ data Builtin (sym :: Symbol) a
   = Builtin a
   | Unknown String
   | Missing
+
+derive instance genericBuiltin :: Generic (Builtin sym a) _
+instance showBuiltin ::
+  ( Show a
+  ) => Show (Builtin sym a) where
+  show = genericShow
 
 exactly :: ∀ sym a. Builtin sym a → Maybe a
 exactly (Builtin a) = Just a
