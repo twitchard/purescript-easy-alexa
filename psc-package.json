@@ -3,6 +3,9 @@
   "set": "master",
   "source": "https://github.com/twitchard/package-sets.git",
   "depends": [
+    "psci-support",
+    "debug",
+    "test-unit",
     "alexa",
     "generics-rep",
     "prelude",
