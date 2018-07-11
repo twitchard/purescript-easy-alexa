@@ -132,7 +132,7 @@ instance zAlexaInputRep' ::
         unless
           (name == reflectSymbol (SProxy :: SProxy cname) <> "Intent") $
           throwError $ UnknownIntent name
-        case (read slots) of
+        case read slots of
           Left _ → throwError $ SlotMismatch slots
           Right m → parseSlots (RLProxy :: RLProxy rs) m
       SessionEndedRequest _ → throwError $ UnknownIntent "SessionEnded"
@@ -147,7 +147,7 @@ instance zAlexaInputRep' ::
 class AlexaInputRow (rs :: RowList) (r :: # Type) | rs → r where
   parseSlots
     :: RLProxy rs
-    → Object.Object { value :: String }
+    → Object.Object { value :: Maybe String }
     → Either InputError (Record r)
 
   slotList
@@ -167,7 +167,9 @@ instance consAlexaInputRow ::
     parseSlots _ m =
       case lookup (reflectSymbol name) m of
          Nothing → map (insert name empty) rest
-         Just val → map (insert name (parseSlot' val.value)) rest
+         Just val → case val.value of
+            Just v → map (insert name (parseSlot' v)) rest
+            Nothing → map (insert name empty) rest
 
       where
         rest = parseSlots (RLProxy :: RLProxy rl') m

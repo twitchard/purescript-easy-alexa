@@ -11,7 +11,6 @@ import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Eq (genericEq)
 import Data.Generic.Rep.Show (genericShow)
 import Data.Maybe (Maybe(..))
-import Debug.Trace (spy)
 import EasyAlexa (Builtin(..), InputError(..), parseInput)
 import Foreign (Foreign)
 import Simple.JSON (undefined, write)
@@ -56,8 +55,16 @@ testParseSkill = do
       Left (SlotMismatch _) → pure unit
       _ → failure "Should produce SlotMismatch"
 
-  test "Missing Value" do
+  test "Missing Slot" do
     let request = makeRequest { intentName : "SomeNumberIntent", slots : write {} }
+        result :: Either InputError BuiltinNumberInput
+        result = parseInput request
+    case result of
+      Right (SomeNumber { n : Missing }) → pure unit
+      _ → failure "Should parse to (SomeNumber { n : Missing })"
+
+  test "Missing Value Inside Slot" do
+    let request = makeRequest { intentName : "SomeNumberIntent", slots : write { "n" : {} } }
         result :: Either InputError BuiltinNumberInput
         result = parseInput request
     case result of
