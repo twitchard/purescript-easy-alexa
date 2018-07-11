@@ -23,11 +23,11 @@ parseInputSuite =
     testParseSkill
 
 data BuiltinNumberInput
-  = Launch
-  | SomeNumber { n :: Builtin "AMAZON.NUMBER" Int }
-  | SomeNumbers { n :: Builtin "AMAZON.NUMBER" Int
+  = SomeNumbers { n :: Builtin "AMAZON.NUMBER" Int
                 , m :: Builtin "AMAZON.NUMBER" Int
                 }
+  | SomeNumber { n :: Builtin "AMAZON.NUMBER" Int }
+  | Launch
   | SessionEnded
 
 derive instance genericBuiltinNumberInput :: Generic BuiltinNumberInput _
@@ -79,6 +79,15 @@ testParseSkill = do
     case result of
       Right (SomeNumber { n : Builtin 3 }) → pure unit
       _ → failure "Should parse to (SomeNumber { n : Builtin 3 })"
+
+  test "Known Values" do
+    let slots = write { "n" : { value : "3" }, "m": { value : "pizza" } }
+        request = makeRequest { intentName : "SomeNumbers", slots }
+        result :: Either InputError BuiltinNumberInput
+        result = parseInput request
+    case result of
+      Right (SomeNumbers { n : Builtin 3, m : Unknown "pizza" }) → pure unit
+      _ → failure "Should parse to (SomeNumbers { n : Builtin 3 , m : Missing \"Pizza\"})"
 
 
   where
