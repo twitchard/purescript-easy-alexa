@@ -14,7 +14,7 @@ import Data.Maybe (Maybe(..))
 import EasyAlexa (Builtin(..), InputError(..), parseInput)
 import Foreign (Foreign)
 import Simple.JSON (undefined, write)
-import Test.Unit (TestF, failure, suite, test)
+import Test.Unit (TestF, failure, suite, test, testOnly)
 
 parseInputSuite :: Free TestF Unit
 parseInputSuite = 
@@ -37,9 +37,17 @@ instance showBuiltinNumberInput :: Show BuiltinNumberInput where
 
 testParseSkill :: Free TestF Unit
 testParseSkill = do
+
+  testOnly "Launch Request" do
+    let request = launchRequest
+        result :: Either InputError BuiltinNumberInput
+        result = parseInput request
+    case result of
+      Right Launch → pure unit
+      _ → failure "Should produce Launch"
+
   test "Unrecognized Intent" do
-    let expected = ((Left <<< UnknownIntent) $ "BadIntent")
-        request = makeRequest { intentName : "BadIntent", slots : write {}}
+    let request = makeIntentRequest { intentName : "BadIntent", slots : write {}}
         result :: Either InputError BuiltinNumberInput
         result = parseInput request
 
@@ -48,7 +56,7 @@ testParseSkill = do
       _ → failure "Should fail with (UnknownIntent \"BadIntent\")"
 
   test "Bad Slots" do
-    let request = makeRequest { intentName : "SomeNumberIntent", slots : write 2}
+    let request = makeIntentRequest { intentName : "SomeNumberIntent", slots : write 2}
         result :: Either InputError BuiltinNumberInput
         result = parseInput request
     case result of
@@ -56,7 +64,7 @@ testParseSkill = do
       _ → failure "Should produce SlotMismatch"
 
   test "Missing Slot" do
-    let request = makeRequest { intentName : "SomeNumberIntent", slots : write {} }
+    let request = makeIntentRequest { intentName : "SomeNumberIntent", slots : write {} }
         result :: Either InputError BuiltinNumberInput
         result = parseInput request
     case result of
@@ -64,7 +72,7 @@ testParseSkill = do
       _ → failure "Should parse to (SomeNumber { n : Missing })"
 
   test "Missing Value Inside Slot" do
-    let request = makeRequest { intentName : "SomeNumberIntent", slots : write { "n" : {} } }
+    let request = makeIntentRequest { intentName : "SomeNumberIntent", slots : write { "n" : {} } }
         result :: Either InputError BuiltinNumberInput
         result = parseInput request
     case result of
@@ -72,7 +80,7 @@ testParseSkill = do
       _ → failure "Should parse to (SomeNumber { n : Missing })"
 
   test "Unknown Value" do
-    let request = makeRequest { intentName : "SomeNumberIntent", slots : write { "n" : { value : "pizza" } } }
+    let request = makeIntentRequest { intentName : "SomeNumberIntent", slots : write { "n" : { value : "pizza" } } }
         result :: Either InputError BuiltinNumberInput
         result = parseInput request
     case result of
@@ -80,7 +88,7 @@ testParseSkill = do
       _ → failure "Should parse to (SomeNumber { n : Unknown \"pizza\" })"
 
   test "Known Value" do
-    let request = makeRequest { intentName : "SomeNumberIntent", slots : write { "n" : { value : "3" } } }
+    let request = makeIntentRequest { intentName : "SomeNumberIntent", slots : write { "n" : { value : "3" } } }
         result :: Either InputError BuiltinNumberInput
         result = parseInput request
     case result of
@@ -89,7 +97,7 @@ testParseSkill = do
 
   test "Known Values" do
     let slots = write { "n" : { value : "3" }, "m": { value : "pizza" } }
-        request = makeRequest { intentName : "SomeNumbersIntent", slots }
+        request = makeIntentRequest { intentName : "SomeNumbersIntent", slots }
         result :: Either InputError BuiltinNumberInput
         result = parseInput request
     case result of
@@ -98,8 +106,25 @@ testParseSkill = do
 
 
   where
-    makeRequest :: { intentName :: String, slots :: Foreign } → AlexaRequest
-    makeRequest { intentName, slots } =
+    launchRequest :: AlexaRequest
+    launchRequest =
+      LaunchRequest
+        { request : { requestId : ""
+                    , timestamp : ""
+                    , locale : ""
+                    }
+        , version : ""
+        , session : { new : true
+                    , sessionId : ""
+                    , application : {}
+                    , attributes : undefined
+                    , user : emptyUser
+                    }
+        , context : {}
+        }
+
+    makeIntentRequest :: { intentName :: String, slots :: Foreign } → AlexaRequest
+    makeIntentRequest { intentName, slots } =
       ( IntentRequest
         { request :
           { dialogState : Nothing
@@ -114,11 +139,11 @@ testParseSkill = do
           , sessionId : ""
           , application : {}
           , attributes : undefined
-          , user :
-            { userId : ""
-            , accessToken : Nothing
-            }
+          , user : emptyUser
           }
         , context : {}
         }
       )
+    emptyUser = { userId : ""
+                , accessToken : Nothing
+                }

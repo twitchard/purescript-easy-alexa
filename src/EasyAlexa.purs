@@ -88,14 +88,14 @@ instance sAlexaInputRep ::
   )
   => AlexaInputRep (Sum (Constructor aname a) b) where
     parseInput' ar =
-      if name == reflectSymbol (SProxy :: SProxy aname) <> "Intent"
+      if nameMatches (reflectSymbol (SProxy :: SProxy aname))
          then Inl <$> parsea ar
          else Inr <$> parseb ar
       where
-        name = case ar of
-          LaunchRequest _ → "Launch"
-          SessionEndedRequest _ → "SessionEnded"
-          IntentRequest { request: { intent : { "name": name' } } } → name'
+        nameMatches name = case ar of
+          LaunchRequest _ → name == "Launch"
+          SessionEndedRequest _ → name == "SessionEnded"
+          IntentRequest { request: { intent : { "name": name' } } } → name == name' <> "Intent"
         parsea :: AlexaRequest → Either InputError (Constructor aname a)
         parsea = parseInput'
 
@@ -109,13 +109,23 @@ instance sAlexaInputRep ::
 instance zAlexaInputRep ::
   ( IsSymbol aname
   ) => AlexaInputRep (Constructor aname NoArguments) where
-  parseInput' ar =
-     case ar of
-       IntentRequest { request : { intent : {name, slots} } } →
-         if (name == reflectSymbol (SProxy :: SProxy aname) <> "Intent")
-         then pure (Constructor NoArguments)
-         else throwError $ UnknownIntent name
-       _ → throwError $ UnknownIntent ""
+  parseInput' ar = parseInput''
+    where
+      cname = reflectSymbol (SProxy :: SProxy aname)
+      parseInput''
+        | cname == "Launch" = case ar of
+            LaunchRequest _ → pure $ Constructor NoArguments
+            _ → throwError $ UnknownIntent ""
+        | cname == "SessionEnded" = case ar of
+            SessionEndedRequest _ → pure $ Constructor NoArguments
+            _ → throwError $ UnknownIntent ""
+        | otherwise = case ar of
+            IntentRequest { request : { intent : {name, slots} } } →
+              if (name == cname <> "Intent")
+              then pure (Constructor NoArguments)
+              else throwError $ UnknownIntent name
+            _ → throwError $ UnknownIntent ""
+
   inputList' _ = pure
     { inputName : reflectSymbol (SProxy :: SProxy aname)
     , slotRecs : mempty
