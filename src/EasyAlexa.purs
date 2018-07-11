@@ -10,6 +10,7 @@ import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty (filter) as NE
 import Data.Either (Either(..), note)
 import Data.Generic.Rep (class Generic, Argument(..), Constructor(..), NoArguments(..), Sum(..), to)
+import Data.Generic.Rep.Eq (genericEq)
 import Data.Generic.Rep.Show (genericShow)
 import Data.Int (fromString) as Int
 import Data.List (List(..), reverse, (:))
@@ -19,6 +20,7 @@ import Data.Map (keys, lookup, member) as Map
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String.CodeUnits (fromCharArray, toCharArray)
 import Data.Traversable (for_)
+import Foreign (Foreign)
 import Foreign.Object (Object) as Object
 import Foreign.Object (lookup)
 import Prim.Row (class Cons, class Lacks)
@@ -47,7 +49,8 @@ instance maybeEmptyableSlot ::
 
 data InputError
   = UnknownIntent String
-  | SlotMismatch
+  | SlotMismatch Foreign
+
 
 type SlotRec =
   { name :: String
@@ -55,7 +58,7 @@ type SlotRec =
   , values :: Array { value :: String, synonyms :: Array String}
   }
 
-type InputRec = 
+type InputRec =
   { inputName :: String
   , slotRecs :: Array SlotRec
   }
@@ -113,17 +116,19 @@ instance zAlexaInputRep ::
     , slotRecs : mempty
     }
 
-
 instance zAlexaInputRep' ::
   ( RowToList row rs
   , AlexaInputRow rs row
   , IsSymbol cname
   ) => AlexaInputRep (Constructor cname (Argument (Record row))) where
-  parseInput' ar = Constructor <$> 
+  parseInput' ar = Constructor <$>
     Argument <$> case ar of
-      IntentRequest { request : { intent : {name, slots} } } →
+      IntentRequest { request : { intent : {name, slots} } } → do
+        unless
+          (name == reflectSymbol (SProxy :: SProxy cname)) $
+          throwError $ UnknownIntent name
         case (read slots) of
-          Left _ → throwError $ UnknownIntent name
+          Left _ → throwError $ SlotMismatch slots
           Right m → parseSlots (RLProxy :: RLProxy rs) m
       SessionEndedRequest _ → throwError $ UnknownIntent "SessionEnded"
       LaunchRequest _ → throwError $ UnknownIntent "Launch"
@@ -151,10 +156,10 @@ instance consAlexaInputRow ::
   , RowToList row' rl'
   , Cons sym ty row' row
   , EmptyableSlot ty
-  , AlexaInputRow rl' row' 
+  , AlexaInputRow rl' row'
   ) => AlexaInputRow (Cons sym ty rl') row
   where
-    parseSlots _ m = 
+    parseSlots _ m =
       case lookup (reflectSymbol name) m of
          Nothing → map (insert name empty) rest
          Just val → map (insert name (parseSlot' val.value)) rest
@@ -219,7 +224,7 @@ languageModel _ invocationName samples = do
 
     renderIntent i = { name , slots , samples : samples' }
       where
-        name = 
+        name =
           if elem i.inputName standardBuiltins
             then "AMAZON." <> i.inputName <> "Intent"
             else i.inputName <> "Intent"
@@ -232,7 +237,7 @@ languageModel _ invocationName samples = do
         values = sr.values <#> \v →
             { name: { value : v.value, synonyms: v.synonyms } }
 
-    partitionedIntentRecs = 
+    partitionedIntentRecs =
       partition (\i → elem i.inputName standardBuiltins) (fromFoldable allIntentRecs)
     builtinIntentRecs = partitionedIntentRecs.yes
     customIntentRecs = partitionedIntentRecs.no
@@ -240,26 +245,26 @@ languageModel _ invocationName samples = do
     failUnless :: Boolean → String → Either String Unit
     failUnless cond msg = when (not cond) (Left msg)
 
-    builtinIntentsCantHaveSlots = 
+    builtinIntentsCantHaveSlots =
       for_ builtinIntentRecs \i →
         failUnless
           (null i.slotRecs)
           ("built-in intent " <> i.inputName <> " should not have a slot")
-          
+
     customIntentsMustHaveSamples =
       for_ customIntentRecs \i →
         failUnless
           (Map.member i.inputName samples)
           ("custom intent " <> i.inputName <> " must have sample utterances")
 
-    noExtraIntentSamples = 
+    noExtraIntentSamples =
       for_ (Map.keys samples) \name →
         failUnless
           (elem name usedIntentNames)
           ("sample utterances were provided for an intent called " <> name <>
            ", which did not correspond to a constructor in the input type"
           )
-      where 
+      where
             usedIntentNames = customIntentRecs <#> \i → i.inputName
 
     noExtraSlotNames =
@@ -298,7 +303,7 @@ languageModel _ invocationName samples = do
         step acc (Just inner) ( x  : xs) = step acc        (Just (x:inner)) xs
 
         chars = (List.fromFoldable (toCharArray utterance))
-        
+
     allSlotNames = inputList
 
 standardBuiltins :: Array String
@@ -327,6 +332,10 @@ data Builtin (sym :: Symbol) a
   | Missing
 
 derive instance genericBuiltin :: Generic (Builtin sym a) _
+instance eqBuiltin ::
+  ( Eq a
+  ) => Eq (Builtin sym a) where
+  eq = genericEq
 instance showBuiltin ::
   ( Show a
   ) => Show (Builtin sym a) where
@@ -340,7 +349,7 @@ exactly Missing     = Nothing
 class BuiltinSlot (sym :: Symbol) a where
   parseBuiltin :: (SProxy sym) → String → Maybe a
 
-instance slotBuiltinSlot :: 
+instance slotBuiltinSlot ::
   ( BuiltinSlot sym a
   , IsSymbol sym
   ) => EmptyableSlot (Builtin sym a) where
