@@ -51,7 +51,6 @@ data InputError
   = UnknownIntent String
   | SlotMismatch Foreign
 
-
 type SlotRec =
   { name :: String
   , typeName :: String
@@ -110,7 +109,13 @@ instance sAlexaInputRep ::
 instance zAlexaInputRep ::
   ( IsSymbol aname
   ) => AlexaInputRep (Constructor aname NoArguments) where
-  parseInput' _ = pure (Constructor NoArguments)
+  parseInput' ar =
+     case ar of
+       IntentRequest { request : { intent : {name, slots} } } →
+         if (name == reflectSymbol (SProxy :: SProxy aname))
+         then pure (Constructor NoArguments)
+         else throwError $ UnknownIntent name
+       _ → throwError $ UnknownIntent ""
   inputList' _ = pure
     { inputName : reflectSymbol (SProxy :: SProxy aname)
     , slotRecs : mempty
