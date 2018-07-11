@@ -19,6 +19,7 @@ import Data.Map (keys, lookup, member) as Map
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String.CodeUnits (fromCharArray, toCharArray)
 import Data.Traversable (for_)
+import Debug.Trace (spy)
 import Foreign.Object (Object) as Object
 import Foreign.Object (lookup)
 import Prim.Row (class Cons, class Lacks)
@@ -180,7 +181,7 @@ languageModel :: ∀ a
   → Map String (NonEmptyArray String)
   → Either String LanguageModel
 languageModel _ invocationName samples = do
-  builtinIntentsCantHaveSlots
+  --builtinIntentsCantHaveSlots
   customIntentsMustHaveSamples
   noExtraIntentSamples
   noExtraSlotNames
@@ -197,8 +198,8 @@ languageModel _ invocationName samples = do
     mustHandleSessionEnded =
       intentList'
         # find (\x → x.inputName == "SessionEnded")
-        # note "Input type must contain SessionEnded constructor to handle LaunchIntents"
-        >>= (\x → failUnless (null x.slotRecs) "Launch constructor should not have a slot")
+        # note "Input type must contain SessionEnded constructor to handle SessionEndedRequests"
+        >>= (\x → failUnless (null x.slotRecs) "SessionEnded constructor should not have a slot")
 
     mustHandleLaunch =
       intentList'
@@ -238,12 +239,12 @@ languageModel _ invocationName samples = do
     customIntentRecs = partitionedIntentRecs.no
 
     failUnless :: Boolean → String → Either String Unit
-    failUnless cond msg = when cond (Left msg)
+    failUnless cond msg = when (not cond) (Left msg)
 
     builtinIntentsCantHaveSlots = 
       for_ builtinIntentRecs \i →
         failUnless
-          (null i.slotRecs)
+          (spy "null slotRecs" (null (spy "slotRecs" i.slotRecs)))
           ("built-in intent " <> i.inputName <> " should not have a slot")
           
     customIntentsMustHaveSamples =
