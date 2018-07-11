@@ -49,7 +49,7 @@ testParseSkill = do
       _ → failure "Should fail with (UnknownIntent \"BadIntent\")"
 
   test "Bad Slots" do
-    let request = makeRequest { intentName : "SomeNumber", slots : write 2}
+    let request = makeRequest { intentName : "SomeNumberIntent", slots : write 2}
         result :: Either InputError BuiltinNumberInput
         result = parseInput request
     case result of
@@ -57,7 +57,7 @@ testParseSkill = do
       _ → failure "Should produce SlotMismatch"
 
   test "Missing Value" do
-    let request = makeRequest { intentName : "SomeNumber", slots : write {} }
+    let request = makeRequest { intentName : "SomeNumberIntent", slots : write {} }
         result :: Either InputError BuiltinNumberInput
         result = parseInput request
     case result of
@@ -65,7 +65,7 @@ testParseSkill = do
       _ → failure "Should parse to (SomeNumber { n : Missing })"
 
   test "Unknown Value" do
-    let request = makeRequest { intentName : "SomeNumber", slots : write { "n" : { value : "pizza" } } }
+    let request = makeRequest { intentName : "SomeNumberIntent", slots : write { "n" : { value : "pizza" } } }
         result :: Either InputError BuiltinNumberInput
         result = parseInput request
     case result of
@@ -73,7 +73,7 @@ testParseSkill = do
       _ → failure "Should parse to (SomeNumber { n : Unknown \"pizza\" })"
 
   test "Known Value" do
-    let request = makeRequest { intentName : "SomeNumber", slots : write { "n" : { value : "3" } } }
+    let request = makeRequest { intentName : "SomeNumberIntent", slots : write { "n" : { value : "3" } } }
         result :: Either InputError BuiltinNumberInput
         result = parseInput request
     case result of
@@ -82,7 +82,7 @@ testParseSkill = do
 
   test "Known Values" do
     let slots = write { "n" : { value : "3" }, "m": { value : "pizza" } }
-        request = makeRequest { intentName : "SomeNumbers", slots }
+        request = makeRequest { intentName : "SomeNumbersIntent", slots }
         result :: Either InputError BuiltinNumberInput
         result = parseInput request
     case result of

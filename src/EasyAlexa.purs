@@ -88,7 +88,7 @@ instance sAlexaInputRep ::
   )
   => AlexaInputRep (Sum (Constructor aname a) b) where
     parseInput' ar =
-      if name == reflectSymbol (SProxy :: SProxy aname)
+      if name == reflectSymbol (SProxy :: SProxy aname) <> "Intent"
          then Inl <$> parsea ar
          else Inr <$> parseb ar
       where
@@ -112,7 +112,7 @@ instance zAlexaInputRep ::
   parseInput' ar =
      case ar of
        IntentRequest { request : { intent : {name, slots} } } →
-         if (name == reflectSymbol (SProxy :: SProxy aname))
+         if (name == reflectSymbol (SProxy :: SProxy aname) <> "Intent")
          then pure (Constructor NoArguments)
          else throwError $ UnknownIntent name
        _ → throwError $ UnknownIntent ""
@@ -130,7 +130,7 @@ instance zAlexaInputRep' ::
     Argument <$> case ar of
       IntentRequest { request : { intent : {name, slots} } } → do
         unless
-          (name == reflectSymbol (SProxy :: SProxy cname)) $
+          (name == reflectSymbol (SProxy :: SProxy cname) <> "Intent") $
           throwError $ UnknownIntent name
         case (read slots) of
           Left _ → throwError $ SlotMismatch slots
