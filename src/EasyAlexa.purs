@@ -19,7 +19,6 @@ import Data.Map (keys, lookup, member) as Map
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String.CodeUnits (fromCharArray, toCharArray)
 import Data.Traversable (for_)
-import Debug.Trace (spy)
 import Foreign.Object (Object) as Object
 import Foreign.Object (lookup)
 import Prim.Row (class Cons, class Lacks)
@@ -244,7 +243,7 @@ languageModel _ invocationName samples = do
     builtinIntentsCantHaveSlots = 
       for_ builtinIntentRecs \i →
         failUnless
-          (spy "null slotRecs" (null (spy "slotRecs" i.slotRecs)))
+          (null i.slotRecs)
           ("built-in intent " <> i.inputName <> " should not have a slot")
           
     customIntentsMustHaveSamples =
